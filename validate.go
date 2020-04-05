@@ -1,6 +1,7 @@
 package jtd
 
 import (
+	"errors"
 	"math"
 	"strconv"
 	"time"
@@ -30,6 +31,8 @@ type ValidateError struct {
 	SchemaPath   []string
 }
 
+var ErrMaxDepthExceeded = errors.New("jtd: max depth exceeded")
+
 func Validate(schema Schema, instance interface{}, opts ...ValidateOption) ([]ValidateError, error) {
 	settings := ValidateSettings{}
 	for _, opt := range opts {
@@ -48,51 +51,14 @@ func ValidateWithSettings(settings ValidateSettings, schema Schema, instance int
 		Settings:       settings,
 	}
 
-	if err := validate(&state, schema, instance, nil); err != nil {
+	// errMaxErrorsReached is just an internal error used to quickly abort further
+	// validation. It is not an actual error for the end user, just a
+	// circuit-breaker used by validate internally.
+	if err := validate(&state, schema, instance, nil); err != nil && err != errMaxErrorsReached {
 		return nil, err
 	}
 
 	return state.Errors, nil
-}
-
-type validateState struct {
-	Errors         []ValidateError
-	InstanceTokens []string
-	SchemaTokens   [][]string
-	Root           Schema
-	Settings       ValidateSettings
-}
-
-func (vs *validateState) pushInstanceToken(token string) {
-	vs.InstanceTokens = append(vs.InstanceTokens, token)
-}
-
-func (vs *validateState) popInstanceToken() {
-	vs.InstanceTokens = vs.InstanceTokens[:len(vs.InstanceTokens)-1]
-}
-
-func (vs *validateState) pushSchemaToken(token string) {
-	vs.SchemaTokens[len(vs.SchemaTokens)-1] = append(vs.SchemaTokens[len(vs.SchemaTokens)-1], token)
-}
-
-func (vs *validateState) popSchemaToken() {
-	last := vs.SchemaTokens[len(vs.SchemaTokens)-1]
-	vs.SchemaTokens[len(vs.SchemaTokens)-1] = last[:len(last)-1]
-}
-
-func (vs *validateState) pushError() error {
-	instanceTokens := make([]string, len(vs.InstanceTokens))
-	copy(instanceTokens, vs.InstanceTokens)
-
-	schemaTokens := make([]string, len(vs.SchemaTokens[len(vs.SchemaTokens)-1]))
-	copy(schemaTokens, vs.SchemaTokens[len(vs.SchemaTokens)-1])
-
-	vs.Errors = append(vs.Errors, ValidateError{
-		InstancePath: instanceTokens,
-		SchemaPath:   schemaTokens,
-	})
-
-	return nil
 }
 
 func validate(state *validateState, schema Schema, instance interface{}, parentTag *string) error {
@@ -104,6 +70,10 @@ func validate(state *validateState, schema Schema, instance interface{}, parentT
 	case FormEmpty:
 		return nil
 	case FormRef:
+		if len(state.SchemaTokens) == state.Settings.MaxDepth {
+			return ErrMaxDepthExceeded
+		}
+
 		state.SchemaTokens = append(state.SchemaTokens, []string{"definitions", *schema.Ref})
 		if err := validate(state, state.Root.Definitions[*schema.Ref], instance, nil); err != nil {
 			return err
@@ -358,6 +328,52 @@ func validateInt(state *validateState, instance interface{}, min, max float64) e
 		if err := state.pushError(); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+var errMaxErrorsReached = errors.New("jtd internal: max errors reached")
+
+type validateState struct {
+	Errors         []ValidateError
+	InstanceTokens []string
+	SchemaTokens   [][]string
+	Root           Schema
+	Settings       ValidateSettings
+}
+
+func (vs *validateState) pushInstanceToken(token string) {
+	vs.InstanceTokens = append(vs.InstanceTokens, token)
+}
+
+func (vs *validateState) popInstanceToken() {
+	vs.InstanceTokens = vs.InstanceTokens[:len(vs.InstanceTokens)-1]
+}
+
+func (vs *validateState) pushSchemaToken(token string) {
+	vs.SchemaTokens[len(vs.SchemaTokens)-1] = append(vs.SchemaTokens[len(vs.SchemaTokens)-1], token)
+}
+
+func (vs *validateState) popSchemaToken() {
+	last := vs.SchemaTokens[len(vs.SchemaTokens)-1]
+	vs.SchemaTokens[len(vs.SchemaTokens)-1] = last[:len(last)-1]
+}
+
+func (vs *validateState) pushError() error {
+	instanceTokens := make([]string, len(vs.InstanceTokens))
+	copy(instanceTokens, vs.InstanceTokens)
+
+	schemaTokens := make([]string, len(vs.SchemaTokens[len(vs.SchemaTokens)-1]))
+	copy(schemaTokens, vs.SchemaTokens[len(vs.SchemaTokens)-1])
+
+	vs.Errors = append(vs.Errors, ValidateError{
+		InstancePath: instanceTokens,
+		SchemaPath:   schemaTokens,
+	})
+
+	if len(vs.Errors) == vs.Settings.MaxErrors {
+		return errMaxErrorsReached
 	}
 
 	return nil

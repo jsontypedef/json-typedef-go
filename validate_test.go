@@ -11,6 +11,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMaxDepth(t *testing.T) {
+	foo := "foo"
+	schema := jtd.Schema{
+		Definitions: map[string]jtd.Schema{
+			"foo": jtd.Schema{Ref: &foo},
+		},
+		Ref: &foo,
+	}
+
+	_, err := jtd.Validate(schema, nil, jtd.WithMaxDepth(3))
+	assert.Equal(t, jtd.ErrMaxDepthExceeded, err)
+}
+
+func TestMaxErrors(t *testing.T) {
+	schema := jtd.Schema{
+		Elements: &jtd.Schema{
+			Type: jtd.TypeBoolean,
+		},
+	}
+
+	instance := []interface{}{nil, nil, nil, nil, nil}
+
+	res, err := jtd.Validate(schema, instance, jtd.WithMaxErrors(3))
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(res))
+}
+
 type testCase struct {
 	Schema   jtd.Schema  `json:"schema"`
 	Instance interface{} `json:"instance"`
