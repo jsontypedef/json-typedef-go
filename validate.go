@@ -241,7 +241,7 @@ func validate(state *validateState, schema Schema, instance interface{}, parentT
 			}
 			state.popSchemaToken()
 
-			if schema.AdditionalProperties == nil || !*schema.AdditionalProperties {
+			if !schema.AdditionalProperties {
 				for key := range obj {
 					if parentTag != nil && key == *parentTag {
 						continue

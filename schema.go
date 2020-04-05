@@ -15,7 +15,7 @@ type Schema struct {
 	Elements             *Schema
 	Properties           map[string]Schema
 	OptionalProperties   map[string]Schema
-	AdditionalProperties *bool
+	AdditionalProperties bool
 	Values               *Schema
 	Discriminator        string
 	Mapping              map[string]Schema
@@ -93,7 +93,7 @@ func (s Schema) ValidateWithRoot(isRoot bool, root Schema) error {
 		s.Elements != nil,
 		s.Properties != nil,
 		s.OptionalProperties != nil,
-		s.AdditionalProperties != nil,
+		s.AdditionalProperties,
 		s.Values != nil,
 		s.Discriminator != "",
 		s.Mapping != nil,
