@@ -2,6 +2,7 @@ package jtd_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"sort"
 	"strings"
@@ -103,4 +104,74 @@ func TestValidation(t *testing.T) {
 			assert.Equal(t, expectedErrors, validateErrors)
 		})
 	}
+}
+
+func ExampleValidate() {
+	var schema jtd.Schema
+	json.Unmarshal([]byte(`{
+		"properties": {
+			"name": { "type": "string" },
+			"age": { "type": "uint32" },
+			"phones": {
+				"elements": { "type": "string" }
+			}
+		}
+	}`), &schema)
+
+	var dataOk interface{}
+	json.Unmarshal([]byte(`{
+		"name": "John Doe",
+		"age": 43,
+		"phones": ["+44 1234567", "+44 2345678"]
+	}`), &dataOk)
+
+	fmt.Println(jtd.Validate(schema, dataOk))
+
+	var dataBad interface{}
+	json.Unmarshal([]byte(`{
+		"name": "John Doe",
+		"age": 43,
+		"phones": ["+44 1234567", 442345678]
+	}`), &dataBad)
+
+	fmt.Println(jtd.Validate(schema, dataBad))
+
+	// Output:
+	// [] <nil>
+	// [{[phones 1] [properties phones elements type]}] <nil>
+}
+
+func ExampleValidate_maxDepth() {
+	loop := "loop"
+	schema := jtd.Schema{
+		Definitions: map[string]jtd.Schema{
+			"loop": jtd.Schema{
+				Ref: &loop,
+			},
+		},
+		Ref: &loop,
+	}
+
+	// If you ran this, you would overflow the stack:
+	// jtd.Validate(schema, nil)
+
+	fmt.Println(jtd.Validate(schema, nil, jtd.WithMaxDepth(32)))
+	// Output:
+	// [] jtd: max depth exceeded
+}
+
+func ExampleValidate_maxErrors() {
+	schema := jtd.Schema{
+		Elements: &jtd.Schema{
+			Type: jtd.TypeBoolean,
+		},
+	}
+
+	instance := []interface{}{nil, nil, nil, nil, nil}
+
+	fmt.Println(jtd.Validate(schema, instance))
+	fmt.Println(jtd.Validate(schema, instance, jtd.WithMaxErrors(3)))
+	// Output:
+	// [{[0] [elements type]} {[1] [elements type]} {[2] [elements type]} {[3] [elements type]} {[4] [elements type]}] <nil>
+	// [{[0] [elements type]} {[1] [elements type]} {[2] [elements type]}] <nil>
 }
