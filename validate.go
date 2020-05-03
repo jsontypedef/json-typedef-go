@@ -7,32 +7,58 @@ import (
 	"time"
 )
 
+// ValidateSettings are settings that configure ValidateWithSettings.
 type ValidateSettings struct {
-	MaxDepth  int
+	// The maximum number of refs to recursively follow before returning
+	// ErrMaxDepthExceeded. Zero disables a max depth altogether.
+	MaxDepth int
+
+	// The maximum number of validation errors to return. Zero disables a max
+	// number of errors altogether.
 	MaxErrors int
 }
 
+// ValidateOption is an option you can pass to Validate.
 type ValidateOption func(*ValidateSettings)
 
+// WithMaxDepth sets the the MaxDepth option of ValidateSettings.
 func WithMaxDepth(maxDepth int) ValidateOption {
 	return func(settings *ValidateSettings) {
 		settings.MaxDepth = maxDepth
 	}
 }
 
+// WithMaxErrors sets the the MaxErrors option of ValidateSettings.
 func WithMaxErrors(maxErrors int) ValidateOption {
 	return func(settings *ValidateSettings) {
 		settings.MaxErrors = maxErrors
 	}
 }
 
+// ValidateError is a validation error returned from Validate.
+//
+// This corresponds to a standard error indicator from the JSON Typedef
+// specification.
 type ValidateError struct {
+	// Path to the part of the instance that was invalid.
 	InstancePath []string
-	SchemaPath   []string
+
+	// Path to the part of the schema that rejected the instance.
+	SchemaPath []string
 }
 
+// ErrMaxDepthExceeded is the error returned from Validate if too many refs are
+// recursively followed.
+//
+// The maximum depth of refs to follow is controlled by MaxErrors in
+// ValidateSettings.
 var ErrMaxDepthExceeded = errors.New("jtd: max depth exceeded")
 
+// Validate validates a schema against an instance (or "input").
+//
+// Returns ErrMaxDepthExceeded if too many refs are recursively followed while
+// validating. Otherwise, returns a set of ValidateError, in conformance with
+// the JSON Typedef specification.
 func Validate(schema Schema, instance interface{}, opts ...ValidateOption) ([]ValidateError, error) {
 	settings := ValidateSettings{}
 	for _, opt := range opts {
@@ -42,6 +68,12 @@ func Validate(schema Schema, instance interface{}, opts ...ValidateOption) ([]Va
 	return ValidateWithSettings(settings, schema, instance)
 }
 
+// ValidateWithSettings validates a schema against an instance, using a set of
+// settings.
+//
+// Returns ErrMaxDepthExceeded if too many refs are recursively followed while
+// validating. Otherwise, returns a set of ValidateError, in conformance with
+// the JSON Typedef specification.
 func ValidateWithSettings(settings ValidateSettings, schema Schema, instance interface{}) ([]ValidateError, error) {
 	state := validateState{
 		Errors:         []ValidateError{},
