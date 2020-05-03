@@ -229,5 +229,5 @@ validateUntrusted(jtd.Schema{
 [badge]: https://godoc.org/github.com/jsontypedef/json-typedef-go?status.svg
 [godoc]: https://godoc.org/github.com/jsontypedef/json-typedef-go
 [jtd]: https://jsontypedef.com
-[jtd-go-codegen]: https://jsontypedef.com/docs/go/code-generation
-[jtd-go-validation]: https://jsontypedef.com/docs/go/validation
+[jtd-go-codegen]: https://jsontypedef.com/docs/golang/code-generation
+[jtd-go-validation]: https://jsontypedef.com/docs/golang/validation
