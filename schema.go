@@ -7,19 +7,19 @@ import (
 
 // Schema represents a JSON Typedef Schema.
 type Schema struct {
-	Definitions          map[string]Schema      `json:"definitions"`
-	Metadata             map[string]interface{} `json:"metadata"`
-	Nullable             bool                   `json:"nullable"`
-	Ref                  *string                `json:"ref"`
-	Type                 Type                   `json:"type"`
-	Enum                 []string               `json:"enum"`
-	Elements             *Schema                `json:"elements"`
-	Properties           map[string]Schema      `json:"properties"`
-	OptionalProperties   map[string]Schema      `json:"optionalProperties"`
-	AdditionalProperties bool                   `json:"additionalProperties"`
-	Values               *Schema                `json:"values"`
-	Discriminator        string                 `json:"discriminator"`
-	Mapping              map[string]Schema      `json:"mapping"`
+	Definitions          map[string]Schema      `json:"definitions,omitempty"`
+	Metadata             map[string]interface{} `json:"metadata,omitempty"`
+	Nullable             bool                   `json:"nullable,omitempty"`
+	Ref                  *string                `json:"ref,omitempty"`
+	Type                 Type                   `json:"type,omitempty"`
+	Enum                 []string               `json:"enum,omitempty"`
+	Elements             *Schema                `json:"elements,omitempty"`
+	Properties           map[string]Schema      `json:"properties,omitempty"`
+	OptionalProperties   map[string]Schema      `json:"optionalProperties,omitempty"`
+	AdditionalProperties bool                   `json:"additionalProperties,omitempty"`
+	Values               *Schema                `json:"values,omitempty"`
+	Discriminator        string                 `json:"discriminator,omitempty"`
+	Mapping              map[string]Schema      `json:"mapping,omitempty"`
 }
 
 // Type represents the values that the JSON Typedef "type" keyword can take on.
